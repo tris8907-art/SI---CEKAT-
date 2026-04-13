@@ -1,0 +1,108 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: reports
+// Document ID: {reportId}
+// Fields:
+//   - id: string (required)
+//   - timestamp: string (required, ISO 8601)
+//   - personnelName: string (required)
+//   - unitNumber: string (required)
+//   - odometer: number (required)
+//   - engineOilRadiator: string (enum: Aman, Perlu Perbaikan)
+//   - electricalLights: string (enum: Aman, Perlu Perbaikan)
+//   - sirenHorn: string (enum: Aman, Perlu Perbaikan)
+//   - tireCondition: string (enum: Aman, Perlu Perbaikan)
+//   - pumpPTO: string (enum: Aman, Perlu Perbaikan)
+//   - tankCondition: string (enum: Aman, Perlu Perbaikan)
+//   - hoseCondition: string (enum: Aman, Perlu Perbaikan)
+//   - nozzleCondition: string (enum: Aman, Perlu Perbaikan)
+//   - brakesCondition: string (enum: Aman, Perlu Perbaikan)
+//   - fuelLevel: number
+//   - waterLevel: number
+//   - notes: string
+//   - status: string (enum: SIAGA (READY TO FIGHT), SIAGA TERBATAS, OFF-SERVICE (RUSAK))
+//   - aiDraft: string
+//
+// Collection: config
+// Document ID: ai
+// Fields:
+//   - draftInstruction: string
+//   - summaryInstruction: string
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "tris8907@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidString(field, maxLen) {
+      return request.resource.data[field] is string && request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidNumber(field, min, max) {
+      return request.resource.data[field] is number && request.resource.data[field] >= min && request.resource.data[field] <= max;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidReport(data) {
+      return data.id is string && data.id.size() <= 100 &&
+             data.timestamp is string && data.timestamp.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$") &&
+             data.personnelName is string && data.personnelName.size() <= 100 &&
+             data.unitNumber is string && data.unitNumber.size() <= 100 &&
+             data.odometer is number && data.odometer >= 0 &&
+             data.fuelLevel is number && data.fuelLevel >= 0 && data.fuelLevel <= 100 &&
+             data.waterLevel is number && data.waterLevel >= 0 && data.waterLevel <= 100 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 2000)) &&
+             data.status in ["SIAGA (READY TO FIGHT)", "SIAGA TERBATAS", "OFF-SERVICE (RUSAK)"];
+    }
+
+    function isValidConfig(data) {
+      return (!('draftInstruction' in data) || (data.draftInstruction is string && data.draftInstruction.size() <= 5000)) &&
+             (!('summaryInstruction' in data) || (data.summaryInstruction is string && data.summaryInstruction.size() <= 5000));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /reports/{reportId} {
+      // Anyone authenticated can read and create reports (petugas & admin)
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data);
+      
+      // Only admin can update or delete reports
+      allow update: if isAdmin() && isValidReport(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /config/ai {
+      // Anyone authenticated can read config
+      allow read: if isAuthenticated();
+      // Only admin can update config
+      allow write: if isAdmin() && isValidConfig(request.resource.data);
+    }
+  }
+}

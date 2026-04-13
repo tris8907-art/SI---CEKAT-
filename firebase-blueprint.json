@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "InspectionReport": {
+      "title": "InspectionReport",
+      "description": "Laporan pemeriksaan teknis harian armada pemadam kebakaran.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID unik laporan" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "Waktu input laporan" },
+        "personnelName": { "type": "string", "description": "Nama petugas pelapor" },
+        "unitNumber": { "type": "string", "description": "Nomor/Nama unit armada" },
+        "odometer": { "type": "number", "description": "Angka odometer kendaraan" },
+        "engineOilRadiator": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "electricalLights": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "sirenHorn": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "tireCondition": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "pumpPTO": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "tankCondition": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "hoseCondition": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "nozzleCondition": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "brakesCondition": { "type": "string", "enum": ["Aman", "Perlu Perbaikan"] },
+        "fuelLevel": { "type": "number", "description": "Level BBM dalam persen" },
+        "waterLevel": { "type": "number", "description": "Level air dalam persen" },
+        "notes": { "type": "string", "description": "Catatan tambahan" },
+        "status": { "type": "string", "enum": ["SIAGA (READY TO FIGHT)", "SIAGA TERBATAS", "OFF-SERVICE (RUSAK)"] },
+        "aiDraft": { "type": "string", "description": "Draf laporan yang dihasilkan AI" }
+      },
+      "required": ["id", "timestamp", "personnelName", "unitNumber", "odometer", "status"]
+    },
+    "AppConfig": {
+      "title": "AppConfig",
+      "description": "Konfigurasi aplikasi termasuk instruksi AI.",
+      "type": "object",
+      "properties": {
+        "draftInstruction": { "type": "string" },
+        "summaryInstruction": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "InspectionReport",
+      "description": "Koleksi laporan pemeriksaan harian."
+    },
+    "/config/ai": {
+      "schema": "AppConfig",
+      "description": "Dokumen tunggal untuk konfigurasi AI."
+    }
+  }
+}
